@@ -1,0 +1,27 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    username: root
+    password: sp^Ea1aaE3YN
+    url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&serverTimezone=UTC
+  jpa:
+    hibernate.ddl-auto: update
+    generate-ddl: true
+    show-sql: true
+
+indexing-settings:
+  sites:
+#    - url: https://www.radiomv.ru
+#      name: Милицейская_волна
+    - url: https://www.svetlovka.ru
+      name: Библиотека
+#    - url: https://www.skillbox.ru
+#      name: Skillbox
+#    - url: https://www.playback.ru
+#      name: PlayBack.Ru
+
+jsoup-settings:
+  useragent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36 Edg/112.0.1722.58"
+  referrer: "https://www.google.com"
