@@ -5,10 +5,12 @@ import org.springframework.stereotype.Service;
 import searchengine.config.JsoupConfig;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
+import searchengine.dto.indexing.IndexingResponse;
 import searchengine.model.SiteEntity;
 import searchengine.model.StatusEnum;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+import searchengine.siteparser.ForkJoinSiteParser;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,12 +34,22 @@ public class IndexingServiceImpl implements IndexingService {
 
 
     @Override
-    public boolean startIndexing() {
+    public IndexingResponse startIndexing() {
+        IndexingResponse indexingResponse = new IndexingResponse();
         if (isIndexed()) {
-            return true;
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Индексация уже запущена");
+        }else {
+            new Thread(this::indexing).start();
+            indexingResponse.setResult(true);
+            indexingResponse.setError(null);
         }
-        new Thread(this::indexing).start();
-        return false;
+        return indexingResponse;
+    }
+
+    public IndexingResponse stopIndexing(){
+        IndexingResponse indexingResponse = new IndexingResponse();
+        return indexingResponse;
     }
 
     private boolean isIndexed() {
