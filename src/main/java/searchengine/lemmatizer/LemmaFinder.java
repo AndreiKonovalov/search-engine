@@ -2,6 +2,8 @@ package searchengine.lemmatizer;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.util.*;
@@ -12,7 +14,7 @@ public class LemmaFinder {
     private static final String[] particlesNames = new String[]{"МЕЖД", "ПРЕДЛ", "СОЮЗ", "ЧАСТ"};
 
     public static LemmaFinder getInstance() throws IOException {
-        LuceneMorphology morphology= new RussianLuceneMorphology();
+        LuceneMorphology morphology = new RussianLuceneMorphology();
         return new LemmaFinder(morphology);
     }
 
@@ -20,18 +22,13 @@ public class LemmaFinder {
         this.luceneMorphology = luceneMorphology;
     }
 
-    private LemmaFinder(){
+    private LemmaFinder() {
         throw new RuntimeException("Disallow construct");
     }
 
-    /**
-     * Метод разделяет текст на слова, находит все леммы и считает их количество.
-     *
-     * @param text текст из которого будут выбираться леммы
-     * @return ключ является леммой, а значение количеством найденных лемм
-     */
     public Map<String, Integer> collectLemmas(String text) {
-        String[] words = arrayContainsRussianWords(text);
+        String clearText = clearTextFromHtmlTags(text);
+        String[] words = arrayContainsRussianWords(clearText);
         HashMap<String, Integer> lemmas = new HashMap<>();
 
         for (String word : words) {
@@ -61,13 +58,9 @@ public class LemmaFinder {
         return lemmas;
     }
 
-
-    /**
-     * @param text текст из которого собираем все леммы
-     * @return набор уникальных лемм найденных в тексте
-     */
     public Set<String> getLemmaSet(String text) {
-        String[] textArray = arrayContainsRussianWords(text);
+        String clearText = clearTextFromHtmlTags(text);
+        String[] textArray = arrayContainsRussianWords(clearText);
         Set<String> lemmaSet = new HashSet<>();
         for (String word : textArray) {
             if (!word.isEmpty() && isCorrectWordForm(word)) {
@@ -109,5 +102,10 @@ public class LemmaFinder {
             }
         }
         return true;
+    }
+
+    private String clearTextFromHtmlTags(String text) {
+        Document doc = Jsoup.parse(text);
+        return doc.body().text();
     }
 }

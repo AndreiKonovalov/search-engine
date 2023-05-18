@@ -52,6 +52,11 @@ public class IndexingServiceImpl implements IndexingService {
         return indexingResponse;
     }
 
+    @Override
+    public IndexingResponse indexingPage() {
+        return null;
+    }
+
     private boolean isIndexed() {
         AtomicBoolean isIndexed = new AtomicBoolean(false);
         siteRepository.findAll().forEach(siteEntity -> {
