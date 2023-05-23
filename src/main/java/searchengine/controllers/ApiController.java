@@ -31,8 +31,8 @@ public class ApiController {
     public ResponseEntity<IndexingResponse> stopIndexing(){
         return ResponseEntity.ok(indexingService.stopIndexing());
     }
-    @PostMapping("/indexPage{url}")
-    public ResponseEntity<IndexingResponse> indexPage(@PathVariable String url){
-        return ResponseEntity.ok(indexingService.indexingPage());
+    @PostMapping("/indexPage")
+    public ResponseEntity<IndexingResponse> indexPage(@RequestParam(name = "url") String url){
+        return ResponseEntity.ok(indexingService.indexingPage(url));
     }
 }

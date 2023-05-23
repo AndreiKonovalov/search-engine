@@ -14,6 +14,7 @@ import searchengine.siteparser.ForkJoinSiteParser;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RejectedExecutionException;
@@ -29,6 +30,8 @@ public class IndexingServiceImpl implements IndexingService {
     private PageRepository pageRepository;
     @Autowired
     private JsoupConfig jsoupConfig;
+
+    private ForkJoinPool forkJoinPool;
     private List<Thread> threadsList;
     private List<ForkJoinPool> joinPools;
 
@@ -39,7 +42,7 @@ public class IndexingServiceImpl implements IndexingService {
         if (isIndexed()) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Индексация уже запущена");
-        }else {
+        } else {
             new Thread(this::indexing).start();
             indexingResponse.setResult(true);
             indexingResponse.setError(null);
@@ -47,25 +50,34 @@ public class IndexingServiceImpl implements IndexingService {
         return indexingResponse;
     }
 
-    public IndexingResponse stopIndexing(){
+    public IndexingResponse stopIndexing() {
         IndexingResponse indexingResponse = new IndexingResponse();
         return indexingResponse;
     }
 
     @Override
-    public IndexingResponse indexingPage() {
-        return null;
+    public IndexingResponse indexingPage(String url) {
+        IndexingResponse indexingResponse = new IndexingResponse();
+        if (checkUrl(url)){
+            forkJoinPool = new ForkJoinPool();
+            SiteEntity siteEntity = siteRepository.findByUrl(url);
+            forkJoinPool.invoke(new ForkJoinSiteParser(url, siteEntity, jsoupConfig,
+                    siteRepository, pageRepository));
+            siteEntity.setStatus(StatusEnum.INDEXED);
+            siteRepository.save(siteEntity);
+            forkJoinPool.shutdown();
+            indexingResponse.setResult(true);
+            indexingResponse.setError(null);
+        }
+        else {
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Данная страница находится за пределами сайтов, " +
+                    "указанных в конфигурационном файле");
+        }
+        return indexingResponse;
     }
 
-    private boolean isIndexed() {
-        AtomicBoolean isIndexed = new AtomicBoolean(false);
-        siteRepository.findAll().forEach(siteEntity -> {
-            if (siteEntity.getStatus().equals(StatusEnum.INDEXING)) {
-                isIndexed.set(true);
-            }
-        });
-        return isIndexed.get();
-    }
+
 
     private void indexing() {
         List<ForkJoinSiteParser> siteParsers = new ArrayList<>();
@@ -82,7 +94,7 @@ public class IndexingServiceImpl implements IndexingService {
         siteParsers.forEach(parser -> threadsList.add(new Thread(() -> {
             SiteEntity siteEntity = parser.getSiteEntity();
             try {
-                ForkJoinPool forkJoinPool = new ForkJoinPool();
+                forkJoinPool = new ForkJoinPool();
                 joinPools.add(forkJoinPool);
                 forkJoinPool.invoke(parser);
                 siteEntity.setStatus(StatusEnum.INDEXED);
@@ -96,6 +108,7 @@ public class IndexingServiceImpl implements IndexingService {
             }
         })));
         threadsList.forEach(Thread::start);
+        joinPools.forEach(ForkJoinPool::shutdown);
     }
 
     private void saveSiteInTable(Site site) {
@@ -109,5 +122,34 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void deleteAllInfoForSite(String url) {
         siteRepository.deleteAllByUrl(url);
+    }
+
+    private boolean checkUrl(String url) {
+        AtomicBoolean isPresent = new AtomicBoolean(false);
+        siteRepository.findAll().stream()
+                .filter(site -> site.getUrl().equals(url))
+                .forEach(site -> {
+                    deleteAllInfoForSite(site.getUrl());
+                    isPresent.set(true);
+                });
+
+        if (!isPresent.get()) {
+            sites.getSites().stream()
+                    .filter(site -> site.getUrl().equals(url))
+                    .forEach(site -> {
+                saveSiteInTable(site);
+                isPresent.set(true);
+            });
+        }
+        return isPresent.get();
+    }
+    private boolean isIndexed() {
+        AtomicBoolean isIndexed = new AtomicBoolean(false);
+        siteRepository.findAll().forEach(siteEntity -> {
+            if (siteEntity.getStatus().equals(StatusEnum.INDEXING)) {
+                isIndexed.set(true);
+            }
+        });
+        return isIndexed.get();
     }
 }

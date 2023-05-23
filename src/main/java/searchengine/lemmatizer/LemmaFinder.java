@@ -4,6 +4,8 @@ import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.*;
@@ -104,8 +106,13 @@ public class LemmaFinder {
         return true;
     }
 
-    private String clearTextFromHtmlTags(String text) {
-        Document doc = Jsoup.parse(text);
-        return doc.body().text();
+    private String clearTextFromHtmlTags(String html) {
+        StringBuilder clearText = new StringBuilder();
+        Document doc = Jsoup.parse(html);
+        Elements body = doc.select("body");
+        Elements title = doc.select("title");
+        body.stream().map(Element::text).forEach(clearText::append);
+        title.stream().map(Element::text).forEach(clearText::append);
+        return clearText.toString();
     }
 }
